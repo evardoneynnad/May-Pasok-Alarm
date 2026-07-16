@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="fil">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>May Pasok Ka Pa! — Alarm</title>
+<meta name="theme-color" content="#1B1F3B">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#1B1F3B;
+    --night-2:#252b52;
+    --amber:#FFB347;
+    --red:#E8433B;
+    --gold:#F4C95D;
+    --cream:#FFF8ED;
+    --slate:#9aa0c3;
+    --radius:20px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    color:var(--cream);
+    background:
+      radial-gradient(circle at 80% -10%, rgba(244,201,93,0.25), transparent 55%),
+      radial-gradient(circle at -10% 110%, rgba(232,67,59,0.25), transparent 55%),
+      linear-gradient(180deg, var(--night) 0%, var(--night-2) 100%);
+    min-height:100vh;
+    overscroll-behavior:none;
+  }
+  .app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:28px 20px calc(110px + env(safe-area-inset-bottom)) 20px;
+    position:relative;
+  }
+  header{ text-align:center; margin-bottom:6px; }
+  .eyebrow{
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gold); font-weight:600; margin:0 0 6px;
+  }
+  .clock{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:56px;
+    letter-spacing:1px;
+    text-align:center;
+    margin:4px 0 2px;
+  }
+  .clock .sec{ font-size:24px; color:var(--slate); vertical-align: 6px; }
+  .today{
+    text-align:center; color:var(--slate); font-size:13px; margin-bottom:22px;
+  }
+
+  .section-title{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:20px;
+    margin:18px 0 12px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .section-title span.count{
+    font-family:'Inter'; font-weight:600; font-size:12px; color:var(--slate);
+  }
+
+  #alarmList{ display:flex; flex-direction:column; gap:12px; }
+  .empty{
+    border:1.5px dashed rgba(255,248,237,0.2);
+    border-radius:var(--radius);
+    padding:28px 18px;
+    text-align:center;
+    color:var(--slate);
+    font-size:14px;
+    line-height:1.5;
+  }
+
+  .alarm-card{
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:var(--radius);
+    padding:16px 16px 16px 18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    position:relative;
+    overflow:hidden;
+    transition:opacity .2s ease;
+  }
+  .alarm-card::before{
+    content:'';
+    position:absolute; left:0; top:0; bottom:0; width:5px;
+    background:linear-gradient(180deg, var(--gold), var(--red));
+  }
+  .alarm-card.off{ opacity:.45; }
+  .alarm-info{ flex:1; min-width:0; }
+  .alarm-time{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:26px;
+    line-height:1.1;
+  }
+  .alarm-label{
+    font-size:13px;
+    color:var(--slate);
+    margin-top:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .alarm-repeat{
+    font-size:11px; color:var(--gold); margin-top:4px; letter-spacing:.04em; text-transform:uppercase; font-weight:600;
+  }
+
+  .switch{
+    width:46px; height:28px; border-radius:999px;
+    background:rgba(255,255,255,0.12);
+    position:relative; cursor:pointer; flex:none;
+    border:none; padding:0;
+  }
+  .switch.on{ background:var(--red); }
+  .switch::after{
+    content:''; position:absolute; top:3px; left:3px;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--cream);
+    transition:transform .18s ease;
+  }
+  .switch.on::after{ transform:translateX(18px); }
+
+  .del-btn{
+    background:none; border:none; color:var(--slate);
+    font-size:18px; cursor:pointer; padding:4px 2px; flex:none;
+  }
+  .del-btn:hover{ color:var(--red); }
+
+  .fab{
+    position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(24px + env(safe-area-inset-bottom));
+    width:min(440px, calc(100% - 40px));
+    background:linear-gradient(135deg, var(--red), #c9302a);
+    color:var(--cream);
+    border:none;
+    border-radius:16px;
+    padding:16px;
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:.02em;
+    cursor:pointer;
+    box-shadow:0 12px 28px rgba(232,67,59,0.35);
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    z-index:20;
+  }
+  .fab:active{ transform:translateX(-50%) scale(0.98); }
+
+  /* Bottom sheet for adding alarm */
+  .sheet-backdrop{
+    position:fixed; inset:0; background:rgba(10,12,26,0.6);
+    backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+    z-index:30;
+  }
+  .sheet-backdrop.show{ opacity:1; pointer-events:auto; }
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0;
+    background:var(--night-2);
+    border-radius:24px 24px 0 0;
+    padding:22px 22px calc(26px + env(safe-area-inset-bottom));
+    transform:translateY(105%);
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+    z-index:31;
+    max-width:480px; margin:0 auto;
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+  .sheet.show{ transform:translateY(0); }
+  .sheet h3{
+    font-family:'Baloo 2', sans-serif; margin:0 0 18px; font-size:19px;
+  }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block; font-size:12px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; font-weight:600;
+  }
+  input[type="time"], input[type="text"]{
+    width:100%; background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.12);
+    color:var(--cream); border-radius:12px; padding:12px 14px;
+    font-family:'JetBrains Mono', monospace; font-size:20px;
+    outline:none;
+  }
+  input[type="text"]{ font-family:'Inter'; font-size:15px; }
+  input::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.7; }
+
+  .days-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .day-chip{
+    flex:1; min-width:38px; text-align:center;
+    padding:9px 0; border-radius:10px; font-size:12px; font-weight:600;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+    color:var(--slate); cursor:pointer;
+  }
+  .day-chip.active{ background:var(--gold); color:var(--night); border-color:var(--gold); }
+
+  .sheet-actions{ display:flex; gap:10px; margin-top:20px; }
+  .btn{
+    flex:1; border:none; border-radius:12px; padding:14px; font-weight:700;
+    font-family:'Baloo 2', sans-serif; font-size:15px; cursor:pointer;
+  }
+  .btn.ghost{ background:rgba(255,255,255,0.06); color:var(--cream); }
+  .btn.primary{ background:var(--red); color:var(--cream); }
+
+  /* Ringing overlay */
+  .ring-overlay{
+    position:fixed; inset:0; z-index:100;
+    background:radial-gradient(circle at 50% 20%, #4a1512, var(--night) 70%);
+    display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:30px;
+    animation:flash 0.9s steps(2,end) infinite;
+  }
+  .ring-overlay.show{ display:flex; }
+  @keyframes flash{
+    0%,100%{ background:radial-gradient(circle at 50% 20%, #4a1512, var(--night) 70%); }
+    50%{ background:radial-gradient(circle at 50% 20%, #8c1f18, #2a0f0f 70%); }
+  }
+  .mega{
+    font-size:64px; margin-bottom:10px;
+    animation:shake .35s infinite;
+  }
+  @keyframes shake{
+    0%,100%{ transform:rotate(-6deg); }
+    50%{ transform:rotate(6deg); }
+  }
+  .shout{
+    font-family:'Baloo 2', sans-serif; font-weight:800;
+    font-size:44px; line-height:1.05; color:var(--cream);
+    text-shadow:0 0 24px rgba(232,67,59,0.7);
+    margin-bottom:8px;
+  }
+  .shout-sub{ color:var(--gold); font-size:15px; margin-bottom:36px; font-weight:600; }
+  .ring-time{ font-family:'JetBrains Mono'; font-size:15px; color:var(--slate); margin-bottom:30px; }
+  .ring-actions{ display:flex; gap:14px; width:100%; max-width:340px; }
+  .ring-btn{
+    flex:1; padding:18px; border-radius:16px; border:none; cursor:pointer;
+    font-family:'Baloo 2', sans-serif; font-weight:700; font-size:16px;
+  }
+  .ring-btn.snooze{ background:rgba(255,255,255,0.1); color:var(--cream); }
+  .ring-btn.stop{ background:var(--gold); color:var(--night); }
+
+  .unlock{
+    position:fixed; inset:0; z-index:90; background:var(--night);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:40px;
+  }
+  .unlock h1{ font-family:'Baloo 2'; font-size:28px; margin:0 0 10px; }
+  .unlock p{ color:var(--slate); font-size:14px; max-width:320px; line-height:1.6; margin-bottom:26px;}
+  .unlock button{
+    background:var(--red); color:var(--cream); border:none; border-radius:14px;
+    padding:16px 32px; font-family:'Baloo 2'; font-weight:700; font-size:16px; cursor:pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .ring-overlay{ animation:none; }
+    .mega{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="unlock" id="unlockScreen">
+  <div style="font-size:52px; margin-bottom:14px;">📣</div>
+  <h1>May Pasok Ka Pa!</h1>
+  <p>Isang alarm na hindi lang tutunog — sisigawan ka pa. I-tap para paganahin ang tunog at boses bago mag-set ng alarm.</p>
+  <button id="unlockBtn">Gisingin ang App</button>
+</div>
+
+<div class="app" id="mainApp" style="display:none;">
+  <header>
+    <p class="eyebrow">Gising Alarm</p>
+    <div class="clock" id="liveClock">--:--<span class="sec">--</span></div>
+    <div class="today" id="liveDate">—</div>
+  </header>
+
+  <div class="section-title">
+    Mga Alarm <span class="count" id="alarmCount">0 na naka-set</span>
+  </div>
+
+  <div id="alarmList"></div>
+</div>
+
+<button class="fab" id="openSheetBtn" style="display:none;">＋ Magdagdag ng Alarm</button>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+<div class="sheet" id="sheet">
+  <h3>Bagong Alarm</h3>
+  <div class="field">
+    <label for="timeInput">Oras</label>
+    <input type="time" id="timeInput">
+  </div>
+  <div class="field">
+    <label for="labelInput">Label</label>
+    <input type="text" id="labelInput" placeholder="hal. Gising para sa eskwela" maxlength="40">
+  </div>
+  <div class="field">
+    <label>Ulitin</label>
+    <div class="days-row" id="daysRow">
+      <div class="day-chip" data-day="1">L</div>
+      <div class="day-chip" data-day="2">M</div>
+      <div class="day-chip" data-day="3">M</div>
+      <div class="day-chip" data-day="4">H</div>
+      <div class="day-chip" data-day="5">B</div>
+      <div class="day-chip" data-day="6">S</div>
+      <div class="day-chip" data-day="0">L</div>
+    </div>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn ghost" id="cancelBtn">Kanselahin</button>
+    <button class="btn primary" id="saveBtn">I-save</button>
+  </div>
+</div>
+
+<div class="ring-overlay" id="ringOverlay">
+  <div class="mega">📣</div>
+  <div class="shout">MAY PASOK<br>KA PA!!</div>
+  <div class="shout-sub" id="ringLabel">Gising na!</div>
+  <div class="ring-time" id="ringTime">--:--</div>
+  <div class="ring-actions">
+    <button class="ring-btn snooze" id="snoozeBtn">Snooze 5 min</button>
+    <button class="ring-btn stop" id="stopBtn">Gising na ako!</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'may-pasok-ka-pa-alarms';
+  const DAY_NAMES = ['Linggo','Lunes','Martes','Miyerkules','Huwebes','Biyernes','Sabado'];
+
+  let alarms = [];
+  let audioCtx = null;
+  let sirenNode = null;
+  let ringing = false;
+  let wakeLock = null;
+  let lastCheckedMinute = null;
+  let speechVoice = null;
+
+  function loadAlarms(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      alarms = raw ? JSON.parse(raw) : [];
+    }catch(e){ alarms = []; }
+  }
+  function saveAlarms(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(alarms));
+  }
+
+  function pad(n){ return n.toString().padStart(2,'0'); }
+
+  function fmtTime12(hhmm){
+    const [h,m] = hhmm.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12; if(h12 === 0) h12 = 12;
+    return `${h12}:${pad(m)} ${ampm}`;
+  }
+
+  function renderClock(){
+    const now = new Date();
+    document.getElementById('liveClock').innerHTML =
+      `${pad(now.getHours())}:${pad(now.getMinutes())}<span class="sec">${pad(now.getSeconds())}</span>`;
+    document.getElementById('liveDate').textContent =
+      `${DAY_NAMES[now.getDay()]}, ${now.toLocaleDateString('fil-PH', {month:'long', day:'numeric', year:'numeric'})}`;
+  }
+
+  function renderAlarms(){
+    const list = document.getElementById('alarmList');
+    const count = document.getElementById('alarmCount');
+    list.innerHTML = '';
+    const activeCount = alarms.filter(a=>a.enabled).length;
+    count.textContent = `${activeCount} na aktibo`;
+
+    if(alarms.length === 0){
+      list.innerHTML = `<div class="empty">Wala ka pang alarm. Pindutin ang "＋ Magdagdag ng Alarm" sa ibaba para magsimula.</div>`;
+      return;
+    }
+
+    const sorted = [...alarms].sort((a,b)=> a.time.localeCompare(b.time));
+
+    sorted.forEach(a => {
+      const card = document.createElement('div');
+      card.className = 'alarm-card' + (a.enabled ? '' : ' off');
+      const repeatText = a.days && a.days.length
+        ? a.days.slice().sort().map(d => ['L','M','M','H','B','S','L'][d]).join(' ')
+        : 'Isang beses lang';
+      card.innerHTML = `
+        <div class="alarm-info">
+          <div class="alarm-time">${fmtTime12(a.time)}</div>
+          <div class="alarm-label">${a.label || 'Alarm'}</div>
+          <div class="alarm-repeat">${repeatText}</div>
+        </div>
+        <button class="switch ${a.enabled ? 'on' : ''}" data-id="${a.id}" aria-label="Toggle alarm"></button>
+        <button class="del-btn" data-id="${a.id}" aria-label="Delete alarm">✕</button>
+      `;
+      list.appendChild(card);
+    });
+
+    list.querySelectorAll('.switch').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const a = alarms.find(x => x.id === id);
+        if(a){ a.enabled = !a.enabled; saveAlarms(); renderAlarms(); }
+      });
+    });
+    list.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        alarms = alarms.filter(x => x.id !== id);
+        saveAlarms(); renderAlarms();
+      });
+    });
+  }
+
+  // ---- Alarm checking loop ----
+  function checkAlarms(){
+    const now = new Date();
+    const hhmm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const minuteKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${hhmm}`;
+    if(minuteKey === lastCheckedMinute) return;
+    lastCheckedMinute = minuteKey;
+
+    if(ringing) return;
+
+    alarms.forEach(a => {
+      if(!a.enabled) return;
+      if(a.time !== hhmm) return;
+      const matchesDay = (!a.days || a.days.length === 0) || a.days.includes(now.getDay());
+      if(!matchesDay) return;
+      triggerAlarm(a);
+    });
+  }
+
+  // ---- Sound: siren via WebAudio ----
+  function ensureAudioCtx(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function startSiren(){
+    const ctx = ensureAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    gain.gain.value = 0.12;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+
+    let rising = true;
+    const interval = setInterval(() => {
+      if(!ringing){ clearInterval(interval); return; }
+      const now = ctx.currentTime;
+      osc.frequency.linearRampToValueAtTime(rising ? 880 : 440, now + 0.5);
+      rising = !rising;
+    }, 500);
+
+    sirenNode = { osc, gain, interval };
+  }
+
+  function stopSiren(){
+    if(sirenNode){
+      clearInterval(sirenNode.interval);
+      try{ sirenNode.osc.stop(); }catch(e){}
+      sirenNode = null;
+    }
+  }
+
+  // ---- Voice: shout the phrase ----
+  function pickVoice(){
+    const voices = speechSynthesis.getVoices();
+    speechVoice =
+      voices.find(v => /fil|tl-PH/i.test(v.lang)) ||
+      voices.find(v => /en-PH/i.test(v.lang)) ||
+      voices.find(v => /en/i.test(v.lang)) ||
+      voices[0] || null;
+  }
+  if('speechSynthesis' in window){
+    speechSynthesis.onvoiceschanged = pickVoice;
+    pickVoice();
+  }
+
+  const SHOUT_LINES = [
+    'May pasok ka pa!',
+    'Gising na, tamad!',
+    'Huli ka na naman!',
+    'Bilisan mo na!'
+  ];
+  let shoutTimer = null;
+
+  function shoutLoop(){
+    if(!ringing || !('speechSynthesis' in window)) return;
+    const line = SHOUT_LINES[Math.floor(Math.random() * SHOUT_LINES.length)];
+    const utter = new SpeechSynthesisUtterance(line);
+    utter.lang = speechVoice ? speechVoice.lang : 'fil-PH';
+    if(speechVoice) utter.voice = speechVoice;
+    utter.pitch = 1.4;
+    utter.rate = 1.05;
+    utter.volume = 1;
+    speechSynthesis.speak(utter);
+    shoutTimer = setTimeout(shoutLoop, 2600);
+  }
+
+  function stopShout(){
+    if(shoutTimer) clearTimeout(shoutTimer);
+    shoutTimer = null;
+    if('speechSynthesis' in window) speechSynthesis.cancel();
+  }
+
+  async function requestWakeLock(){
+    try{
+      if('wakeLock' in navigator){
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    }catch(e){ /* ignore */ }
+  }
+  function releaseWakeLock(){
+    if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
+  }
+
+  function triggerAlarm(alarm){
+    ringing = true;
+    document.getElementById('ringLabel').textContent = alarm.label || 'Gising na!';
+    document.getElementById('ringTime').textContent = fmtTime12(alarm.time);
+    document.getElementById('ringOverlay').classList.add('show');
+
+    startSiren();
+    shoutLoop();
+    requestWakeLock();
+    if(navigator.vibrate){
+      navigator.vibrate([500,200,500,200,500,200,500]);
+    }
+
+    if(!alarm.days || alarm.days.length === 0){
+      alarm.enabled = false;
+      saveAlarms();
+    }
+  }
+
+  function endAlarm(){
+    ringing = false;
+    document.getElementById('ringOverlay').classList.remove('show');
+    stopSiren();
+    stopShout();
+    releaseWakeLock();
+    if(navigator.vibrate) navigator.vibrate(0);
+    renderAlarms();
+  }
+
+  document.getElementById('stopBtn').addEventListener('click', endAlarm);
+  document.getElementById('snoozeBtn').addEventListener('click', () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 5);
+    const snoozeTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    alarms.push({
+      id: 'snz-' + Date.now(),
+      time: snoozeTime,
+      label: 'Snooze',
+      enabled: true,
+      days: []
+    });
+    saveAlarms();
+    endAlarm();
+  });
+
+  // ---- Sheet (add alarm) ----
+  const sheet = document.getElementById('sheet');
+  const backdrop = document.getElementById('sheetBackdrop');
+  let selectedDays = new Set();
+
+  function openSheet(){
+    document.getElementById('timeInput').value = '07:00';
+    document.getElementById('labelInput').value = '';
+    selectedDays.clear();
+    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('active'));
+    sheet.classList.add('show');
+    backdrop.classList.add('show');
+  }
+  function closeSheet(){
+    sheet.classList.remove('show');
+    backdrop.classList.remove('show');
+  }
+
+  document.getElementById('openSheetBtn').addEventListener('click', openSheet);
+  document.getElementById('cancelBtn').addEventListener('click', closeSheet);
+  backdrop.addEventListener('click', closeSheet);
+
+  document.querySelectorAll('.day-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const d = Number(chip.dataset.day);
+      if(selectedDays.has(d)){ selectedDays.delete(d); chip.classList.remove('active'); }
+      else { selectedDays.add(d); chip.classList.add('active'); }
+    });
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const time = document.getElementById('timeInput').value;
+    if(!time) return;
+    const label = document.getElementById('labelInput').value.trim();
+    alarms.push({
+      id: 'a-' + Date.now(),
+      time,
+      label,
+      enabled: true,
+      days: Array.from(selectedDays)
+    });
+    saveAlarms();
+    renderAlarms();
+    closeSheet();
+  });
+
+  // ---- Unlock screen (needed so audio/speech is allowed to play later) ----
+  document.getElementById('unlockBtn').addEventListener('click', () => {
+    ensureAudioCtx();
+    if('speechSynthesis' in window){
+      const warm = new SpeechSynthesisUtterance(' ');
+      warm.volume = 0;
+      speechSynthesis.speak(warm);
+      pickVoice();
+    }
+    document.getElementById('unlockScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    document.getElementById('openSheetBtn').style.display = 'flex';
+  });
+
+  // ---- Boot ----
+  loadAlarms();
+  renderClock();
+  renderAlarms();
+  setInterval(() => { renderClock(); checkAlarms(); }, 1000);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    });
+  }
+})();
+</script>
+</body>
+</html>
