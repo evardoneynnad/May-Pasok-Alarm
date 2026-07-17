@@ -6,13 +6,43 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-  <circle cx="256" cy="270" r="140" fill="#FFF8ED"/>
-  <circle cx="256" cy="270" r="140" fill="none" stroke="#F4C95D" stroke-width="14"/>
-  <rect x="150" y="120" width="26" height="70" rx="13" transform="rotate(-35 150 120)" fill="#F4C95D"/>
-  <rect x="336" y="120" width="26" height="70" rx="13" transform="rotate(35 362 120)" fill="#F4C95D"/>
-  <circle cx="200" cy="245" r="14" fill="#1B1F3B"/>
-  <circle cx="312" cy="245" r="14" fill="#1B1F3B"/>
-  <path d="M195 315 Q256 380 317 315 Q256 340 195 315 Z" fill="#E8433B"/>
-  <circle cx="120" cy="270" r="16" fill="#F4C95D"/>
-  <circle cx="392" cy="270" r="16" fill="#F4C95D"/>
+
+  <!-- motion/shout lines -->
+  <g stroke="#F4C95D" stroke-width="10" stroke-linecap="round" opacity="0.85">
+    <path d="M70 150 L110 168"/>
+    <path d="M60 220 L104 224"/>
+    <path d="M70 290 L110 274"/>
+    <path d="M442 150 L402 168"/>
+    <path d="M452 220 L408 224"/>
+    <path d="M442 290 L402 274"/>
+  </g>
+
+  <!-- face -->
+  <circle cx="256" cy="260" r="150" fill="#FFF8ED"/>
+
+  <!-- furious eyebrows -->
+  <path d="M170 195 L225 215" stroke="#1B1F3B" stroke-width="16" stroke-linecap="round"/>
+  <path d="M342 195 L287 215" stroke="#1B1F3B" stroke-width="16" stroke-linecap="round"/>
+
+  <!-- googly-angry eyes -->
+  <circle cx="205" cy="245" r="26" fill="#1B1F3B"/>
+  <circle cx="213" cy="238" r="8" fill="#FFF8ED"/>
+  <circle cx="307" cy="245" r="26" fill="#1B1F3B"/>
+  <circle cx="299" cy="238" r="8" fill="#FFF8ED"/>
+
+  <!-- blush -->
+  <circle cx="165" cy="300" r="18" fill="#F4C95D" opacity="0.6"/>
+  <circle cx="347" cy="300" r="18" fill="#F4C95D" opacity="0.6"/>
+
+  <!-- wide open shouting mouth -->
+  <ellipse cx="256" cy="335" rx="62" ry="46" fill="#E8433B"/>
+  <ellipse cx="256" cy="350" rx="40" ry="20" fill="#8c1f18"/>
+  <path d="M204 320 Q256 300 308 320" fill="none" stroke="#FFF8ED" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- flying tsinelas (slipper) -->
+  <g transform="translate(370,90) rotate(25)">
+    <path d="M0 20 Q0 0 22 0 L70 0 Q92 0 92 22 Q92 44 70 44 L22 44 Q0 44 0 20 Z" fill="#F4C95D"/>
+    <path d="M46 4 L38 44" stroke="#1B1F3B" stroke-width="6" stroke-linecap="round"/>
+    <path d="M46 4 L58 20" stroke="#1B1F3B" stroke-width="6" stroke-linecap="round"/>
+  </g>
 </svg>

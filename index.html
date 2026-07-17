@@ -42,6 +42,7 @@
     flex-direction:column;
     padding:28px 20px calc(110px + env(safe-area-inset-bottom)) 20px;
     position:relative;
+    isolation:isolate;
   }
   header{ text-align:center; margin-bottom:6px; }
   .eyebrow{
@@ -268,6 +269,56 @@
     .ring-overlay{ animation:none; }
     .mega{ animation:none; }
   }
+
+  .gear-btn{
+    position:absolute; top:26px; right:20px;
+    width:40px; height:40px; border-radius:12px;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+    font-size:18px; cursor:pointer; color:var(--cream);
+  }
+
+  .settings-sheet{ max-height:82vh; overflow-y:auto; }
+  .shout-desc{ font-size:13px; color:var(--slate); line-height:1.55; margin:0 0 16px; }
+  .shout-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+  .shout-item{
+    display:flex; align-items:center; gap:12px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px; padding:12px 14px;
+  }
+  .shout-item.custom{ border-color:rgba(244,201,93,0.3); }
+  .shout-check{
+    width:22px; height:22px; border-radius:7px; flex:none;
+    border:2px solid rgba(255,255,255,0.25); background:transparent;
+    cursor:pointer; position:relative;
+  }
+  .shout-check.checked{ background:var(--gold); border-color:var(--gold); }
+  .shout-check.checked::after{
+    content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:var(--night); font-size:14px; font-weight:700;
+  }
+  .shout-text{ flex:1; font-size:14.5px; }
+  .shout-remove{
+    background:none; border:none; color:var(--slate); font-size:16px; cursor:pointer; flex:none;
+  }
+  .shout-remove:hover{ color:var(--red); }
+  .add-shout-row{ display:flex; gap:8px; margin-bottom:22px; }
+  .add-shout-row input{
+    flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+    color:var(--cream); border-radius:12px; padding:12px 14px; font-family:'Inter'; font-size:14px; outline:none;
+  }
+  .add-shout-row button{
+    background:var(--gold); color:var(--night); border:none; border-radius:12px;
+    padding:0 18px; font-weight:700; font-family:'Baloo 2'; cursor:pointer;
+  }
+  .notif-toggle-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px; padding:14px 16px; margin-bottom:18px;
+  }
+  .notif-toggle-row .label-col{ padding-right:12px; }
+  .notif-toggle-row .label-col p{ margin:0; font-size:14px; font-weight:600; }
+  .notif-toggle-row .label-col span{ font-size:12px; color:var(--slate); }
 </style>
 </head>
 <body>
@@ -280,6 +331,7 @@
 </div>
 
 <div class="app" id="mainApp" style="display:none;">
+  <button class="gear-btn" id="openSettingsBtn" aria-label="Mga sigaw at settings">⚙️</button>
   <header>
     <p class="eyebrow">Gising Alarm</p>
     <div class="clock" id="liveClock">--:--<span class="sec">--</span></div>
@@ -321,6 +373,31 @@
   <div class="sheet-actions">
     <button class="btn ghost" id="cancelBtn">Kanselahin</button>
     <button class="btn primary" id="saveBtn">I-save</button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="settingsBackdrop"></div>
+<div class="sheet settings-sheet" id="settingsSheet">
+  <h3>Mga Sisigawin</h3>
+  <p class="shout-desc">Piliin kung ano ang isisigaw ng alarm pag oras na. Puwede ka ring magdagdag ng sarili mong linya.</p>
+
+  <div class="notif-toggle-row">
+    <div class="label-col">
+      <p>Notification pop-up</p>
+      <span>Lalabas ang alerto kahit nasa ibang app ka, hangga't bukas pa ang app na 'to.</span>
+    </div>
+    <button class="switch" id="notifSwitch"></button>
+  </div>
+
+  <div class="shout-list" id="shoutList"></div>
+
+  <div class="add-shout-row">
+    <input type="text" id="customShoutInput" placeholder="Sariling linya, hal. BANGON NA!" maxlength="60">
+    <button id="addShoutBtn">Idagdag</button>
+  </div>
+
+  <div class="sheet-actions">
+    <button class="btn primary" id="closeSettingsBtn" style="flex:1;">Sarado</button>
   </div>
 </div>
 
@@ -493,17 +570,151 @@
     pickVoice();
   }
 
-  const SHOUT_LINES = [
-    'May pasok ka pa!',
-    'Gising na, tamad!',
-    'Huli ka na naman!',
-    'Bilisan mo na!'
+  const SHOUT_PRESETS_KEY = 'may-pasok-shout-prefs';
+  const DEFAULT_PRESETS = [
+    { id: 'p1', text: 'May pasok ka pa!', on: true },
+    { id: 'p2', text: 'Gising na, tamad!', on: true },
+    { id: 'p3', text: 'Huli ka na naman!', on: true },
+    { id: 'p4', text: 'Bilisan mo na!', on: true },
+    { id: 'p5', text: 'Papasok o papasok?', on: true },
+    { id: 'p6', text: 'TRABAHOOOOOO!', on: true },
+    { id: 'p7', text: 'GABI NA, GISING NAAA!', on: false },
+    { id: 'p8', text: 'UMAGA NA, GISING NAAA!', on: true }
   ];
+  let shoutPresets = [];
+  let customLines = [];
+  let notifEnabled = false;
+
+  function loadShoutPrefs(){
+    try{
+      const raw = localStorage.getItem(SHOUT_PRESETS_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        shoutPresets = parsed.presets || DEFAULT_PRESETS.map(p => ({...p}));
+        customLines = parsed.custom || [];
+        notifEnabled = !!parsed.notif;
+      } else {
+        shoutPresets = DEFAULT_PRESETS.map(p => ({...p}));
+        customLines = [];
+        notifEnabled = false;
+      }
+    }catch(e){
+      shoutPresets = DEFAULT_PRESETS.map(p => ({...p}));
+      customLines = [];
+      notifEnabled = false;
+    }
+  }
+  function saveShoutPrefs(){
+    localStorage.setItem(SHOUT_PRESETS_KEY, JSON.stringify({
+      presets: shoutPresets, custom: customLines, notif: notifEnabled
+    }));
+  }
+  function getActiveLines(){
+    const active = [
+      ...shoutPresets.filter(p => p.on).map(p => p.text),
+      ...customLines.filter(c => c.on).map(c => c.text)
+    ];
+    return active.length ? active : ['May pasok ka pa!'];
+  }
+
+  function renderShoutList(){
+    const list = document.getElementById('shoutList');
+    list.innerHTML = '';
+    shoutPresets.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'shout-item';
+      row.innerHTML = `
+        <button class="shout-check ${p.on ? 'checked' : ''}" data-kind="preset" data-id="${p.id}"></button>
+        <div class="shout-text">${p.text}</div>
+      `;
+      list.appendChild(row);
+    });
+    customLines.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'shout-item custom';
+      row.innerHTML = `
+        <button class="shout-check ${c.on ? 'checked' : ''}" data-kind="custom" data-id="${c.id}"></button>
+        <div class="shout-text">${c.text}</div>
+        <button class="shout-remove" data-id="${c.id}">✕</button>
+      `;
+      list.appendChild(row);
+    });
+
+    list.querySelectorAll('.shout-check').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        if(btn.dataset.kind === 'preset'){
+          const p = shoutPresets.find(x => x.id === id);
+          if(p) p.on = !p.on;
+        } else {
+          const c = customLines.find(x => x.id === id);
+          if(c) c.on = !c.on;
+        }
+        saveShoutPrefs();
+        renderShoutList();
+      });
+    });
+    list.querySelectorAll('.shout-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        customLines = customLines.filter(x => x.id !== btn.dataset.id);
+        saveShoutPrefs();
+        renderShoutList();
+      });
+    });
+  }
+
+  document.getElementById('addShoutBtn').addEventListener('click', () => {
+    const input = document.getElementById('customShoutInput');
+    const text = input.value.trim();
+    if(!text) return;
+    customLines.push({ id: 'c-' + Date.now(), text, on: true });
+    input.value = '';
+    saveShoutPrefs();
+    renderShoutList();
+  });
+
+  const settingsSheet = document.getElementById('settingsSheet');
+  const settingsBackdrop = document.getElementById('settingsBackdrop');
+  function openSettings(){
+    renderShoutList();
+    updateNotifSwitch();
+    settingsSheet.classList.add('show');
+    settingsBackdrop.classList.add('show');
+  }
+  function closeSettings(){
+    settingsSheet.classList.remove('show');
+    settingsBackdrop.classList.remove('show');
+  }
+  document.getElementById('openSettingsBtn').addEventListener('click', openSettings);
+  document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
+  settingsBackdrop.addEventListener('click', closeSettings);
+
+  function updateNotifSwitch(){
+    const sw = document.getElementById('notifSwitch');
+    sw.classList.toggle('on', notifEnabled);
+  }
+  document.getElementById('notifSwitch').addEventListener('click', async () => {
+    if(!notifEnabled){
+      if('Notification' in window){
+        const perm = await Notification.requestPermission();
+        notifEnabled = perm === 'granted';
+        if(perm !== 'granted'){
+          alert('Kailangan mong payagan ang notifications sa browser settings para gumana ito.');
+        }
+      }
+    } else {
+      notifEnabled = false;
+    }
+    saveShoutPrefs();
+    updateNotifSwitch();
+  });
+
   let shoutTimer = null;
 
   function shoutLoop(){
     if(!ringing || !('speechSynthesis' in window)) return;
-    const line = SHOUT_LINES[Math.floor(Math.random() * SHOUT_LINES.length)];
+    const lines = getActiveLines();
+    const line = lines[Math.floor(Math.random() * lines.length)];
     const utter = new SpeechSynthesisUtterance(line);
     utter.lang = speechVoice ? speechVoice.lang : 'fil-PH';
     if(speechVoice) utter.voice = speechVoice;
@@ -540,6 +751,7 @@
     startSiren();
     shoutLoop();
     requestWakeLock();
+    fireNotification(alarm);
     if(navigator.vibrate){
       navigator.vibrate([500,200,500,200,500,200,500]);
     }
@@ -550,13 +762,41 @@
     }
   }
 
-  function endAlarm(){
+  async function fireNotification(alarm){
+    if(!notifEnabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+    try{
+      const lines = getActiveLines();
+      const body = lines[Math.floor(Math.random() * lines.length)];
+      if('serviceWorker' in navigator){
+        const reg = await navigator.serviceWorker.ready;
+        reg.showNotification('📣 May Pasok Ka Pa!', {
+          body,
+          tag: 'may-pasok-alarm',
+          requireInteraction: true,
+          vibrate: [500,200,500,200,500],
+          icon: './icon.svg',
+          badge: './icon.svg'
+        });
+      } else {
+        new Notification('📣 May Pasok Ka Pa!', { body, icon: './icon.svg' });
+      }
+    }catch(e){ /* ignore */ }
+  }
+
+  async function endAlarm(){
     ringing = false;
     document.getElementById('ringOverlay').classList.remove('show');
     stopSiren();
     stopShout();
     releaseWakeLock();
     if(navigator.vibrate) navigator.vibrate(0);
+    if('serviceWorker' in navigator){
+      try{
+        const reg = await navigator.serviceWorker.ready;
+        const notifs = await reg.getNotifications({ tag: 'may-pasok-alarm' });
+        notifs.forEach(n => n.close());
+      }catch(e){}
+    }
     renderAlarms();
   }
 
@@ -638,6 +878,7 @@
 
   // ---- Boot ----
   loadAlarms();
+  loadShoutPrefs();
   renderClock();
   renderAlarms();
   setInterval(() => { renderClock(); checkAlarms(); }, 1000);
